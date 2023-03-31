@@ -1,0 +1,291 @@
+<!doctype html>
+<html>
+<head>
+    <title>JS Demo 测试交互的代码</title>
+    <meta name="viewport"
+          content="user-scalable=no, width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <script src="https://unpkg.com/dsbridge@3.1.3/dist/dsbridge.js"></script>
+    <style type='text/css'>
+    html {
+      font-family: Helvetica, serif;
+      color: #222;
+    }
+
+    h1 {
+      color: steelblue;
+      font-size: 24px;
+      margin-top: 24px;
+      text-align: center;
+    }
+
+    h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    button {
+      margin: 0 3px 10px;
+      font-size: 12px;
+    }
+
+    .logLine {
+      border-bottom: 1px solid #ccc;
+      padding: 4px 2px;
+      font-family: courier, serif;
+      font-size: 11px;
+    }
+
+    body {
+      background-color: #ededf0;
+      font-size: 16px;
+      margin: 0;
+      padding: 0;
+    }
+
+    ul,
+    ol {
+      list-style: none;
+    }
+
+    li,
+    ul,
+    ol {
+      padding: 0;
+      margin: 0;
+    }
+
+    .btn {
+      display: block;
+      background-color: #fafafa;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+      padding: 8px;
+      text-align: center;
+      border-radius: 4px;
+      text-decoration: none;
+      color: #444;
+    }
+
+    .btn:active {
+      background-color: #eee;
+    }
+
+    .text {
+      border: 1px solid #999;
+      background-color: #eee;
+      padding: 10px;
+      line-height: 1.3;
+    }
+
+    .ms-list {
+      margin-bottom: 20px;
+      background-color: #80CBFF;
+      padding: 10px 15px;
+    }
+
+    .route-list {
+      background-color: #2EE898;
+      padding: 10px 15px;
+      margin-bottom: 20px;
+    }
+
+    .ms-list li {
+      margin-bottom: 10px;
+    }
+
+    .div {
+      background: #fff;
+    }
+
+
+  </style>
+</head>
+<body>
+<!--<h1>JS Demo</h1>-->
+<div class="route-list">
+    <h2>H5调用相册、摄像头、相机</h2>
+    <!-- 用于展示摄像头视频流 -->
+    <video id="video" autoplay style="width: 100%;height: 200px" controls></video>
+    <div>
+        <button id="capture" onclick="handleClickCapture()">拍照</button>
+    </div>
+    <!-- 展示拍摄的照片：画布 -->
+    <canvas id="canvas" width="100%" height="200"></canvas>
+</div>
+
+<div class="route-list">
+    <h2>H5调用相册、摄像头、相机</h2>
+    <input type="file" accept="image/*" capture="camera" id="picture">
+    <img src="" id="img" style="width: 100%;height: 200px"/>
+    <p id="text"></p>
+
+    <input type="file" accept="video/*" capture="camcorder" id="videos">
+    <video autoplay id="videoTmp" style="width: 100%;height: 200px" controls></video>
+    <p id="videoText"></p>
+</div>
+
+<div class="ms-list">
+    <h2>h5调用Native方法（js）</h2>
+
+</div>
+
+<div class="route-list">
+    <h2>dsbridge 测试</h2>
+    <div class="btn" onclick="callSyn()">同步调用</div>
+    <div class="btn" onclick="callAsyn()">异步调用</div>
+    <div class="btn" onclick="callNoArgSyn()">不带参数同步调用</div>
+    <div class="btn" onclick="callNoArgAsyn()">不带参数的异步调用</div>
+    <div class="btn" onclick="callProgress()">进度回调 <span id='progress'></span></div>
+    <div class="btn" onclick="echoSyn()">echo.syn</div>
+    <div class="btn" onclick="echoAsyn()">echo.asyn</div>
+    <div class="btn" onclick="hasNativeMethod('xx')">hasNativeMethod("xx")</div>
+    <div class="btn" onclick="hasNativeMethod('testSyn')">hasNativeMethod("testSyn")</div>
+</div>
+<script>
+  window.onerror = function (err) {
+    console.log('window.onerror: ' + err)
+  }
+  var dsBridge
+  window.onload = function () {
+    console.log("onLoad");
+    dsBridge = bridge;
+  }
+
+  function callSyn() {
+    alert(dsBridge.call("testSyn", "testSyn"))
+  }
+
+  function callAsyn() {
+    dsBridge.call("testAsyn", "testAsyn", function (v) {
+      alert(v)
+    })
+  }
+
+  function callNoArgSyn() {
+    alert(dsBridge.call("testNoArgSyn"));
+  }
+
+  function callNoArgAsyn() {
+    dsBridge.call("testNoArgAsyn", function (v) {
+      alert(v)
+    });
+  }
+
+  function callProgress() {
+    dsBridge.call("callProgress", function (value) {
+      if (value === 0) value = "";
+      document.getElementById("progress").innerText = value
+    })
+  }
+
+  function echoSyn() {
+    // call function with namespace
+    var ret = dsBridge.call("echo.syn", {msg: " I am echoSyn call", tag: 1});
+    alert(JSON.stringify(ret))
+  }
+
+  function echoAsyn() {
+    // call function with namespace
+    dsBridge.call("echo.asyn", {msg: " I am echoAsyn call", tag: 2}, function (ret) {
+      alert(JSON.stringify(ret));
+    })
+  }
+
+  //检测Java中是否存在名为handlerName的API, handlerName 可以包含命名空间.
+  function hasNativeMethod(name) {
+    alert(dsBridge.hasNativeMethod(name))
+  }
+
+  var video = document.getElementById('video');
+  var capture = document.getElementById('capture');
+  var ctx = document.getElementById('canvas').getContext('2d');
+
+  /**
+   * 调用用户媒体设备
+   * @param constraints 配置信息
+   * @param success 成功回调函数
+   * @param error 失败回调函数
+   */
+  function getUserMediaToPhoto(constraints, success, error) {
+    if (navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia(constraints).then(success).catch(error);
+    } else if (navigator.webkitGetUserMedia) {
+      navigator.webkitGetUserMedia(constraints, success, error);
+    } else if (navigator.mozGetUserMedia) {
+      navigator.mozGetUserMedia(constraints, success, error);
+    } else if (navigator.getUserMedia) {
+      navigator.getUserMedia(constraints, success, error);
+    }
+  }
+
+  /**
+   * 成功回调函数
+   * @param stream 视频流
+   */
+  function success(stream) {
+    var CompatibleURL = window.URL || window.webkitURL;
+    try {
+      video.src = CompatibleURL.createObjectURL(stream);
+    } catch (e) {
+      video.srcObject = stream;
+    }
+    video.play();
+  }
+
+  /**
+   * 失败回调
+   * @param error 错误对象
+   */
+  function error(error) {
+    console.log('无法访问媒体设备', error);
+  }
+
+  if (navigator.mediaDevices.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.getUserMedia) {
+    getUserMediaToPhoto({video: {width: 480, height: 320}}, success, error);
+  } else {
+    alert('不支持访问用户媒体设备');
+  }
+
+  /**
+   * 拍照按钮点击事件
+   */
+  function handleClickCapture() {
+    //使在画布上显示
+    ctx.drawImage(video, 0, 0, 480, 320);
+    //获取图片，这里获取到的是base64格式的文件
+    var image = ctx.canvas.toDataURL('image/png');
+    //下面可以根据自己的逻辑进行判断
+  }
+
+  document.querySelector('#picture').onchange = function () {
+    if (this.files.length) {
+      let file = this.files[0];
+      let reader = new FileReader();
+      //新建 FileReader 对象
+      reader.onload = function () {
+        // 当 FileReader 读取文件时候，读取的结果会放在 FileReader.result 属性中
+        document.querySelector('#img').src = this.result;
+        document.querySelector('#text').innerHTML = this.result;
+      };
+      // 设置以什么方式读取文件，这里以base64方式
+      reader.readAsDataURL(file);
+    }
+  }
+  document.querySelector('#videos').onchange = function () {
+    if (this.files.length) {
+      let file = this.files[0];
+      let reader = new FileReader();
+      //新建 FileReader 对象
+      reader.onload = function () {
+        // 当 FileReader 读取文件时候，读取的结果会放在 FileReader.result 属性中
+        document.querySelector('#videoTmp').src = this.result;
+        document.querySelector('#videoText').innerHTML = this.result;
+      };
+      // 设置以什么方式读取文件，这里以base64方式
+      reader.readAsDataURL(file);
+    }
+  }
+</script>
+<div id='log'></div>
+</body>
+</html>
